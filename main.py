@@ -1,4 +1,5 @@
 # Developed by Ian Draves
+# Apache License 2.0
 
 import requests
 import urllib.request
