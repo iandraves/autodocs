@@ -1,9 +1,6 @@
 # Developed by Ian Draves
 # Apache License 2.0
 
-import requests
-import urllib.request
-from bs4 import BeautifulSoup
 import time
 import datetime
 import threading
@@ -11,12 +8,20 @@ import os
 import shutil
 import traceback
 from itertools import cycle
-from lxml.html import fromstring
+    
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    from lxml.html import fromstring
+except:
+    os.system("pip3 install requests")
+    os.system("pip3 install bs4")
+    os.system("pip3 install lxml")
 
 # Getting current debate year
 current_year = datetime.date.today().year
 current_month = datetime.date.today().month
-if current_month >= 1 and current_month <= 8:
+if current_month >= 1 and current_month < 8:
     current_year -= 1
 debate_year = str(current_year)
 
