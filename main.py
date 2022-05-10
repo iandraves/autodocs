@@ -1,290 +1,91 @@
-# Developed by Ian Draves
-# Apache License 2.0
-
 import urllib.request
 import datetime
 import threading
 import os
 import shutil
-from itertools import cycle
+import requests
+from bs4 import BeautifulSoup
 
-try:
-    import requests
-    from bs4 import BeautifulSoup
-    from lxml.html import fromstring
-except:
-    os.system("pip3 install requests")
-    os.system("pip3 install bs4")
-    os.system("pip3 install lxml")
-
-# Getting current debate year
-current_year = datetime.date.today().year
-current_month = datetime.date.today().month
-if current_month >= 1 and current_month < 8:
-    current_year -= 1
-debate_year = str(current_year)
-
-# Defining variables
-arg_types = [
-    '1. Affirmatives',
-    '2. Case Negatives',
-    '3. Counterplans',
-    '4. Disadvantages',
-    '5. Impact Files',
-    '6. Kritik Answers',
-    '7. Kritiks',
-    '8. Politics',
-    '9. Theory',
-    '10. Topicality'
+ARG_TYPES = [
+    'Affirmatives',
+    'Case Negatives',
+    'Counterplans',
+    'Disadvantages',
+    'Impact Files',
+    'Kritik Answers',
+    'Kritiks',
+    'Politics',
+    'Theory',
+    'Topicality'
 ]
-urls = [
-    'https://openev.debatecoaches.org/' + debate_year + '/Affirmatives',
-    'https://openev.debatecoaches.org/' + debate_year + '/Case%20Negatives',
-    'https://openev.debatecoaches.org/' + debate_year + '/Counterplans',
-    'https://openev.debatecoaches.org/' + debate_year + '/Disadvantages',
-    'https://openev.debatecoaches.org/' + debate_year + '/Impact%20Files',
-    'https://openev.debatecoaches.org/' + debate_year + '/Kritik%20Answers',
-    'https://openev.debatecoaches.org/' + debate_year + '/Kritiks',
-    'https://openev.debatecoaches.org/' + debate_year + '/Politics',
-    'https://openev.debatecoaches.org/' + debate_year + '/Theory',
-    'https://openev.debatecoaches.org/' + debate_year + '/Topicality'
-]
-
-# Removing folders if they already exist
-for x in range(len(arg_types)):
-    exists = os.path.isdir(arg_types[x])
-    if exists:
-        shutil.rmtree(arg_types[x])
-
-# Creating respective folders
-for x in range(len(arg_types)):
-    os.mkdir(arg_types[x])
+PREFIX_URL = "https://openev.debatecoaches.org/"
 
 
 def feedback(file_name):
-    print("Downloading: " + file_name)
+    print(f"Downloading: {file_name}")
 
 
-def affs():
-    response = requests.get(urls[0])
+def download(num, urls):
+    # Fetching raw HTML
+    response = requests.get(urls[num])
 
     # Parse HTML and save to BeautifulSoup object
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Downloading entire dataset and organizing it
+    # Downloading and categorizing files
     span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
+    for span_link in span_links:
+        download_url = span_link.find("a").get("href").replace(" ", "%20")
         file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
         if os.path.splitext(file_name)[1] != ".docx":
             pass
         else:
             feedback(file_name)
             urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[0], file_name))
+                download_url, os.path.join(f"./downloads/{num + 1}. {ARG_TYPES[num]}", file_name))
 
 
-def caseNegs():
-    response = requests.get(urls[1])
+def main():
+    # Removing folders if they already exist
+    if os.path.isdir(f"./downloads/"):
+        shutil.rmtree(f"./downloads/")
 
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
+    # Creating respective folders
+    os.mkdir("./downloads/")
+    for num, arg in enumerate(ARG_TYPES):
+        os.mkdir(f"./downloads/{num + 1}. {arg}")
 
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[1], file_name))
+    # Getting current debate year
+    current_year = datetime.date.today().year
+    current_month = datetime.date.today().month
+    if current_month >= 1 and current_month < 8:
+        current_year -= 1
+    debate_year = str(current_year)
 
+    # Generating URLs
+    urls = [
+        f"{PREFIX_URL}{debate_year}/Affirmatives",
+        f"{PREFIX_URL}{debate_year}/Case%20Negatives",
+        f"{PREFIX_URL}{debate_year}/Counterplans",
+        f"{PREFIX_URL}{debate_year}/Disadvantages",
+        f"{PREFIX_URL}{debate_year}/Impact%20Files",
+        f"{PREFIX_URL}{debate_year}/Kritik%20Answers",
+        f"{PREFIX_URL}{debate_year}/Kritiks",
+        f"{PREFIX_URL}{debate_year}/Politics",
+        f"{PREFIX_URL}{debate_year}/Theory",
+        f"{PREFIX_URL}{debate_year}/Topicality"
+    ]
 
-def cps():
-    response = requests.get(urls[2])
+    # Creating download threads
+    threads = [threading.Thread(target=download, args=(i, urls,))
+               for i in range(len(ARG_TYPES))]
 
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
+    for thread in threads:
+        thread.start()
 
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        feedback(file_name)
-        urllib.request.urlretrieve(
-            download_url, os.path.join(arg_types[2], file_name))
-
-
-def das():
-    response = requests.get(urls[3])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[3], file_name))
-
-
-def impactFiles():
-    response = requests.get(urls[4])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[4], file_name))
-
-
-def kAnswers():
-    response = requests.get(urls[5])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[5], file_name))
-
-
-def ks():
-    response = requests.get(urls[6])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[6], file_name))
-
-
-def politics():
-    response = requests.get(urls[7])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[7], file_name))
-
-
-def theory():
-    response = requests.get(urls[8])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[8], file_name))
-
-
-def t():
-    response = requests.get(urls[9])
-
-    # Parse HTML and save to BeautifulSoup object
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Downloading entire dataset and organizing it
-    span_links = soup.findAll("span", {"class": "wikiexternallink"})
-    for i in range(len(span_links)):
-        download_url = span_links[i].find("a").get("href").replace(" ", "%20")
-        file_name = download_url.rsplit('/', 1)[-1].replace("%20", " ")
-        if os.path.splitext(file_name)[1] != ".docx":
-            pass
-        else:
-            feedback(file_name)
-            urllib.request.urlretrieve(
-                download_url, os.path.join(arg_types[9], file_name))
+    for thread in threads:
+        thread.join()
 
 
 if __name__ == "__main__":
-    # Initializing threads
-    aff_files = threading.Thread(target=affs)
-    neg_files = threading.Thread(target=caseNegs)
-    cp_files = threading.Thread(target=cps)
-    da_files = threading.Thread(target=das)
-    impact_files = threading.Thread(target=impactFiles)
-    kanswer_files = threading.Thread(target=kAnswers)
-    k_files = threading.Thread(target=ks)
-    politics_files = threading.Thread(target=politics)
-    theory_files = threading.Thread(target=theory)
-    t_files = threading.Thread(target=t)
-
-    # Starting threads
-    aff_files.start()
-    neg_files.start()
-    cp_files.start()
-    da_files.start()
-    impact_files.start()
-    kanswer_files.start()
-    k_files.start()
-    politics_files.start()
-    theory_files.start()
-    t_files.start()
-
-    # Waiting until threads are executed
-    aff_files.join()
-    neg_files.join()
-    cp_files.join()
-    da_files.join()
-    impact_files.join()
-    kanswer_files.join()
-    k_files.join()
-    politics_files.join()
-    theory_files.join()
-    t_files.join()
+    main()
